@@ -5,11 +5,11 @@ import * as secp256k1 from "secp256k1";
 
 const crypto = require("crypto");
 
-var MASTER_SECRET = Buffer.from("Bitcoin seed", "utf8");
-var HARDENED_OFFSET = 0x80000000;
-var LEN = 78;
+const MASTER_SECRET = Buffer.from("Bitcoin seed", "utf8");
+const HARDENED_OFFSET = 0x80000000;
+const LEN = 78;
 
-var BITCOIN_VERSIONS = { private: 0x0488ade4, public: 0x0488b21e };
+const BITCOIN_VERSIONS = { private: 0x0488ade4, public: 0x0488b21e };
 
 class HDKey {
   versions = BITCOIN_VERSIONS;
@@ -101,16 +101,16 @@ class HDKey {
       return this;
     }
 
-    var entries = path.split("/");
-    var hdkey: HDKey = this;
+    const entries = path.split("/");
+    let hdkey: HDKey = this;
     entries.forEach(function (c, i) {
       if (i === 0) {
         assert(/^[mM]{1}/.test(c), 'Path must start with "m" or "M"');
         return;
       }
 
-      var hardened = c.length > 1 && c[c.length - 1] === "'";
-      var childIndex = parseInt(c, 10); // & (HARDENED_OFFSET - 1)
+      const hardened = c.length > 1 && c[c.length - 1] === "'";
+      let childIndex = parseInt(c, 10); // & (HARDENED_OFFSET - 1)
       assert(childIndex < HARDENED_OFFSET, "Invalid index");
       if (hardened) childIndex += HARDENED_OFFSET;
 
@@ -130,8 +130,8 @@ class HDKey {
     if (isHardened) {
       assert(this.privateKey, "Could not derive hardened child key");
 
-      var pk = this.privateKey;
-      var zb = Buffer.alloc(1, 0);
+      let pk = this.privateKey;
+      const zb = Buffer.alloc(1, 0);
       pk = Buffer.concat([zb, pk!]);
 
       data = Buffer.concat([pk, indexBuffer]);
@@ -141,9 +141,9 @@ class HDKey {
 
     const I = crypto.createHmac("sha512", this.chainCode).update(data).digest();
     const IL = I.slice(0, 32);
-    var IR = I.slice(32);
+    const IR = I.slice(32);
 
-    var hd = new HDKey(this.versions);
+    const hd = new HDKey(this.versions);
 
     if (this.privateKey) {
       try {
@@ -206,14 +206,14 @@ class HDKey {
     seedBuffer: Buffer,
     versions?: typeof BITCOIN_VERSIONS
   ) {
-    var I = crypto
+    const I = crypto
       .createHmac("sha512", MASTER_SECRET)
       .update(seedBuffer)
       .digest();
-    var IL = I.slice(0, 32);
-    var IR = I.slice(32);
+    const IL = I.slice(0, 32);
+    const IR = I.slice(32);
 
-    var hdkey = new HDKey(versions);
+    const hdkey = new HDKey(versions);
     hdkey.chainCode = IR;
     hdkey.privateKey = IL;
 
@@ -225,11 +225,11 @@ class HDKey {
     versions?: typeof BITCOIN_VERSIONS
   ) {
     versions = versions || BITCOIN_VERSIONS;
-    var hdkey = new HDKey(versions);
+    const hdkey = new HDKey(versions);
 
-    var keyBuffer = bs58check.decode(base58key);
+    const keyBuffer = bs58check.decode(base58key);
 
-    var version = keyBuffer.readUInt32BE(0);
+    const version = keyBuffer.readUInt32BE(0);
     assert(
       version === versions.private || version === versions.public,
       "Version mismatch: does not match private or public"
@@ -240,7 +240,7 @@ class HDKey {
     hdkey.index = keyBuffer.readUInt32BE(9);
     hdkey.chainCode = keyBuffer.slice(13, 45);
 
-    var key = keyBuffer.slice(45);
+    const key = keyBuffer.slice(45);
     if (key.readUInt8(0) === 0) {
       // private
       assert(
@@ -265,12 +265,12 @@ class HDKey {
 }
 
 function serialize(hdkey: HDKey, version: number, key: Buffer) {
-  var buffer = Buffer.allocUnsafe(LEN);
+  const buffer = Buffer.allocUnsafe(LEN);
 
   buffer.writeUInt32BE(version, 0);
   buffer.writeUInt8(hdkey.depth, 4);
 
-  var fingerprint = hdkey.depth ? hdkey.parentFingerprint : 0x00000000;
+  const fingerprint = hdkey.depth ? hdkey.parentFingerprint : 0x00000000;
   buffer.writeUInt32BE(fingerprint, 5);
   buffer.writeUInt32BE(hdkey.index, 9);
 
