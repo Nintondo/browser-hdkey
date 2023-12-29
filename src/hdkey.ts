@@ -1,7 +1,7 @@
 import * as bs58check from "bs58check";
 import { sha256 } from "@noble/hashes/sha256";
 import { ripemd160 } from "@noble/hashes/ripemd160";
-import * as secp256k1 from "secp256k1";
+import * as secp256k1 from "bells-secp256k1";
 
 const crypto = require("crypto");
 
@@ -52,10 +52,10 @@ class HDKey {
     if (!value) return;
 
     equal(value.length, 32, "Private key must be 32 bytes.");
-    assert(secp256k1.privateKeyVerify(value) === true, "Invalid private key");
+    assert(secp256k1.isPrivate(value) === true, "Invalid private key");
 
     this._privateKey = value;
-    this._publicKey = Buffer.from(secp256k1.publicKeyCreate(value, true));
+    this._publicKey = Buffer.from(secp256k1.pointFromScalar(value, true)!);
     this._identifier = Buffer.from(hash160(this._publicKey));
     this._fingerprint = this._identifier.subarray(0, 4).readUInt32BE(0);
   }
@@ -65,10 +65,13 @@ class HDKey {
       value.length === 33 || value.length === 65,
       "Public key must be 33 or 65 bytes."
     );
-    assert(secp256k1.publicKeyVerify(value) === true, "Invalid public key");
+    assert(
+      secp256k1.isPointCompressed(value) || secp256k1.isPoint(value),
+      "Invalid public key"
+    );
     const publicKey =
       value.length === 65
-        ? Buffer.from(secp256k1.publicKeyConvert(value, true))
+        ? Buffer.from(secp256k1.pointFromScalar(value, true)!)
         : value;
 
     this._publicKey = Buffer.from(publicKey);
@@ -148,7 +151,7 @@ class HDKey {
     if (this.privateKey) {
       try {
         hd.privateKey = Buffer.from(
-          secp256k1.privateKeyTweakAdd(Buffer.from(this.privateKey), IL)
+          secp256k1.privateAdd(Buffer.from(this.privateKey), IL)!
         );
       } catch (err) {
         return this.deriveChild(index + 1);
@@ -156,7 +159,7 @@ class HDKey {
     } else {
       try {
         hd.setPublicKey(
-          Buffer.from(secp256k1.publicKeyTweakAdd(this._publicKey!, IL, true))
+          Buffer.from(secp256k1.pointAddScalar(this._publicKey!, IL, true)!)
         );
       } catch (err) {
         return this.deriveChild(index + 1);
@@ -173,15 +176,12 @@ class HDKey {
 
   sign(hash: Buffer) {
     return Buffer.from(
-      secp256k1.ecdsaSign(
-        Uint8Array.from(hash),
-        Uint8Array.from(this._privateKey!)
-      ).signature
+      secp256k1.sign(Uint8Array.from(hash), Uint8Array.from(this._privateKey!))
     );
   }
 
   verify(hash: Buffer, signature: Buffer) {
-    return secp256k1.ecdsaVerify(
+    return secp256k1.verify(
       Uint8Array.from(signature),
       Uint8Array.from(hash),
       Uint8Array.from(this._publicKey!)
