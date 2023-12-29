@@ -1,4 +1,4 @@
-/// <reference types="node" resolution-mode="require"/>
+/// <reference types="node" />
 declare const BITCOIN_VERSIONS: {
     private: number;
     public: number;
