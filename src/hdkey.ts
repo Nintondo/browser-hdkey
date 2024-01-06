@@ -2,8 +2,8 @@ import * as bs58check from "bs58check";
 import { sha256 } from "@noble/hashes/sha256";
 import { ripemd160 } from "@noble/hashes/ripemd160";
 import * as secp256k1 from "bells-secp256k1";
-
-const crypto = require("crypto");
+import { sha512 } from "@noble/hashes/sha512";
+import { hmac } from "@noble/hashes/hmac";
 
 const MASTER_SECRET = Buffer.from("Bitcoin seed", "utf8");
 const HARDENED_OFFSET = 0x80000000;
@@ -142,9 +142,9 @@ class HDKey {
       data = Buffer.concat([this._publicKey!, indexBuffer]);
     }
 
-    const I = crypto.createHmac("sha512", this.chainCode).update(data).digest();
-    const IL = I.slice(0, 32);
-    const IR = I.slice(32);
+    const I = Buffer.from(hmac(sha512, this.chainCode!, data));
+    const IL = I.subarray(0, 32);
+    const IR = I.subarray(32);
 
     const hd = new HDKey(this.versions);
 
@@ -190,7 +190,9 @@ class HDKey {
 
   wipePrivateData() {
     if (this._privateKey)
-      crypto.randomBytes(this._privateKey.length).copy(this._privateKey);
+      Buffer.from(
+        crypto.getRandomValues(new Uint8Array(this._privateKey.length))
+      ).copy(this._privateKey);
     this._privateKey = undefined;
     return this;
   }
@@ -206,12 +208,9 @@ class HDKey {
     seedBuffer: Buffer,
     versions?: typeof BITCOIN_VERSIONS
   ) {
-    const I = crypto
-      .createHmac("sha512", MASTER_SECRET)
-      .update(seedBuffer)
-      .digest();
-    const IL = I.slice(0, 32);
-    const IR = I.slice(32);
+    const I = Buffer.from(hmac(sha512, MASTER_SECRET, seedBuffer));
+    const IL = I.subarray(0, 32);
+    const IR = I.subarray(32);
 
     const hdkey = new HDKey(versions);
     hdkey.chainCode = IR;
