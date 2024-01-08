@@ -226,7 +226,7 @@ class HDKey {
     versions = versions || BITCOIN_VERSIONS;
     const hdkey = new HDKey(versions);
 
-    const keyBuffer = bs58check.decode(base58key);
+    const keyBuffer = Buffer.from(bs58check.decode(base58key));
 
     const version = keyBuffer.readUInt32BE(0);
     assert(
@@ -237,9 +237,9 @@ class HDKey {
     hdkey.depth = keyBuffer.readUInt8(4);
     hdkey.parentFingerprint = keyBuffer.readUInt32BE(5);
     hdkey.index = keyBuffer.readUInt32BE(9);
-    hdkey.chainCode = keyBuffer.slice(13, 45);
+    hdkey.chainCode = keyBuffer.subarray(13, 45);
 
-    const key = keyBuffer.slice(45);
+    const key = keyBuffer.subarray(45);
     if (key.readUInt8(0) === 0) {
       // private
       assert(
